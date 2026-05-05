@@ -1,39 +1,41 @@
 :root {
-  --bg: #050505;
-  --card: #121212;
+  --bg: #030303;
+  --card: #0f0f0f;
   --cyan: #00f2ff;
-  --red: #ff3e3e;
+  --red: #ff3a3a;
 }
 
 body { background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; }
 
-.nexpt-app { max-width: 800px; margin: 0 auto; padding: 2rem; }
+.nexpt-layout { max-width: 850px; margin: 0 auto; padding: 2rem; }
 
-.main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.navbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; }
 
-.direction-switcher { background: #1a1a1a; padding: 4px; border-radius: 10px; display: flex; }
-.direction-switcher button {
-  background: transparent; border: none; color: #666; padding: 8px 16px; 
-  border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s;
+.status-led { width: 10px; height: 10px; border-radius: 50%; margin-right: 12px; }
+.status-led.active { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
+.status-led.error { background: var(--red); }
+
+.filter-tabs { background: #1a1a1a; padding: 4px; border-radius: 12px; display: flex; }
+.filter-tabs button {
+  background: transparent; border: none; color: #777; padding: 10px 20px;
+  border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.3s;
 }
-.direction-switcher button.active { background: var(--cyan); color: #000; }
+.filter-tabs button.active { background: var(--cyan); color: #000; }
 
-.train-row {
-  background: var(--card); border-radius: 12px; padding: 1.5rem; 
-  margin-bottom: 0.8rem; display: grid; grid-template-columns: 120px 1fr 80px;
-  align-items: center; border: 1px solid #222; transition: 0.3s;
+.train-card {
+  background: var(--card); border-radius: 20px; padding: 1.5rem; margin-bottom: 1rem;
+  display: grid; grid-template-columns: 120px 1fr 100px; align-items: center;
+  border: 1px solid #222; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.train-row.late { border-left: 4px solid var(--red); }
-.train-row.ontime { border-left: 4px solid var(--cyan); }
+.train-card:hover { transform: scale(1.01); border-color: #444; }
 
-.hour { font-size: 1.8rem; font-weight: 800; }
-.delay { color: var(--red); font-size: 0.9rem; font-weight: bold; margin-left: 8px; }
-.dest-name { font-size: 1.2rem; font-weight: 700; text-transform: uppercase; display: block; }
-.service { color: #888; font-size: 0.8rem; }
-.num { font-size: 1.8rem; font-weight: 800; color: var(--cyan); display: block; text-align: right; }
-.label { font-size: 0.6rem; color: #555; text-align: right; display: block; }
+.train-card.late { border-left: 5px solid var(--red); }
+.train-card.ontime { border-left: 5px solid var(--cyan); }
 
-.status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 10px; }
-.status-dot.live { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
-.status-dot.blocked { background: var(--red); }
+.scheduled { font-size: 2rem; font-weight: 900; letter-spacing: -1px; }
+.delay-tag { color: var(--red); font-size: 1rem; font-weight: bold; margin-left: 10px; }
+.destination { font-size: 1.3rem; font-weight: 700; text-transform: uppercase; display: block; }
+.details { color: #888; font-size: 0.85rem; margin-top: 5px; }
+.p-num { font-size: 2rem; font-weight: 900; color: var(--cyan); display: block; text-align: right; }
+.p-label { font-size: 0.7rem; color: #555; display: block; text-align: right; }

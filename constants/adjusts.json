@@ -1,0 +1,9 @@
+{
+  "active_works": {
+    "pragal": { "extra_delay_mins": 0, "reason": "" }
+  },
+  "structural_delays": {
+    "bridge_peak": 2,
+    "bridge_base": 1
+  }
+}

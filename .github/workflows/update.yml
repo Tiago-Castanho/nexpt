@@ -14,22 +14,32 @@ jobs:
 
       - name: Fetch data
         run: |
-          curl "https://servicos.infraestruturasdeportugal.pt/PFP/PFP_Station_Search_Board.aspx?type=2&stationId=9438001" -o raw.json
+          curl -s "https://servicos.infraestruturasdeportugal.pt/PFP/PFP_Station_Search_Board.aspx?type=2&stationId=9438001" -o raw.json
 
-      - name: Save JSON
+      - name: Process data safely
         run: |
           node -e "
             const fs = require('fs');
-            const data = fs.readFileSync('raw.json','utf8');
+
+            const raw = fs.readFileSync('raw.json','utf8');
+
+            let json = null;
+
             try {
-              const json = JSON.parse(data);
+              json = JSON.parse(raw);
+            } catch (e) {
+              console.log('Invalid JSON (blocked or HTML)');
+            }
+
+            if (json && json.Nodes) {
               fs.writeFileSync('data/comboios.json', JSON.stringify(json));
-            } catch(e) {
-              console.log('invalid');
+              console.log('Updated data');
+            } else {
+              console.log('Keeping previous data (no overwrite)');
             }
           "
 
-      - name: Commit
+      - name: Commit changes
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com

@@ -2,7 +2,16 @@
   "Nodes": [
     {
       "StationName": "Pragal",
-      "Elements": []
+      "Elements": [
+        {
+          "Time": "--:--",
+          "DestinyStationName": "A aguardar dados...",
+          "ServiceType": "-",
+          "TrainId": "-",
+          "Platform": "-",
+          "Delay": 0
+        }
+      ]
     }
   ]
 }

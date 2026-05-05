@@ -21,7 +21,6 @@ export const processTrainData = (train, stationName) => {
   return {
     ...train,
     finalDelay: Math.max(0, delay),
-    isLate: delay > 0,
-    severity: delay > 8 ? "#ff3e3e" : delay > 0 ? "#fa0" : "#00f2ff",
+    severity: delay > 8 ? "#ff3e3e" : delay > 0 ? "#fa0" : "#00f2ff"
   };
 };

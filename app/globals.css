@@ -1,38 +1,39 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 :root {
-  --foreground-rgb: 15, 23, 42;
-  --background-start-rgb: 248, 250, 252;
-  --background-end-rgb: 255, 255, 255;
+  --bg: #050505;
+  --card: #121212;
+  --cyan: #00f2ff;
+  --red: #ff3e3e;
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-  min-height: 100vh;
+body { background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; }
+
+.nexpt-app { max-width: 800px; margin: 0 auto; padding: 2rem; }
+
+.main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+
+.direction-switcher { background: #1a1a1a; padding: 4px; border-radius: 10px; display: flex; }
+.direction-switcher button {
+  background: transparent; border: none; color: #666; padding: 8px 16px; 
+  border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s;
+}
+.direction-switcher button.active { background: var(--cyan); color: #000; }
+
+.train-row {
+  background: var(--card); border-radius: 12px; padding: 1.5rem; 
+  margin-bottom: 0.8rem; display: grid; grid-template-columns: 120px 1fr 80px;
+  align-items: center; border: 1px solid #222; transition: 0.3s;
 }
 
-/* Custom scrollbar for a cleaner look */
-::-webkit-scrollbar {
-  width: 8px;
-}
+.train-row.late { border-left: 4px solid var(--red); }
+.train-row.ontime { border-left: 4px solid var(--cyan); }
 
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
+.hour { font-size: 1.8rem; font-weight: 800; }
+.delay { color: var(--red); font-size: 0.9rem; font-weight: bold; margin-left: 8px; }
+.dest-name { font-size: 1.2rem; font-weight: 700; text-transform: uppercase; display: block; }
+.service { color: #888; font-size: 0.8rem; }
+.num { font-size: 1.8rem; font-weight: 800; color: var(--cyan); display: block; text-align: right; }
+.label { font-size: 0.6rem; color: #555; text-align: right; display: block; }
 
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
+.status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 10px; }
+.status-dot.live { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
+.status-dot.blocked { background: var(--red); }

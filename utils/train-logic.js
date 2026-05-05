@@ -1,26 +1,23 @@
-import adjusts from "../constants/adjusts.json";
+// utils/train-logic.js
 
-export const processTrainData = (train, stationName) => {
-  const stationKey = stationName?.toLowerCase().trim() || "pragal";
-  let delay = parseInt(train.Delay) || 0;
+export function obterComboiosAtivos(data) {
+  // Filtra apenas os que têm 'live: true' (em circulação)
+  const ativos = Object.entries(data.trains)
+    .filter(([id, info]) => info.live === true)
+    .map(([id, info]) => ({
+      id,
+      destino: info.destination,
+      atraso: info.delay_msg,
+      onde: info.nodes.length > 0 ? info.nodes[info.nodes.length - 1].station_name : "N/A"
+    }));
 
-  const now = new Date();
-  const h = now.getHours();
-  const isPeak = (h >= 7 && h <= 10) || (h >= 17 && h <= 20);
+  // Filtra os que estão cancelados/suprimidos
+  const suprimidos = Object.entries(data.trains)
+    .filter(([id, info]) => info.canceled === true)
+    .map(([id, info]) => ({
+      id,
+      destino: info.destination
+    }));
 
-  if (stationKey.includes("pragal")) {
-    delay += isPeak
-      ? adjusts.structural_delays.bridge_peak
-      : adjusts.structural_delays.bridge_base;
-  }
-
-  if (adjusts.active_works?.[stationKey]) {
-    delay += adjusts.active_works[stationKey].extra_delay_mins;
-  }
-
-  return {
-    ...train,
-    finalDelay: Math.max(0, delay),
-    severity: delay > 8 ? "#ff3e3e" : delay > 0 ? "#fa0" : "#00f2ff"
-  };
-};
+  return { ativos, suprimidos };
+}

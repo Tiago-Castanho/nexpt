@@ -1,17 +1,20 @@
 {
-  "Nodes": [
+  "comboios": [
     {
-      "StationName": "Pragal",
-      "Elements": [
-        {
-          "Time": "--:--",
-          "DestinyStationName": "A aguardar dados...",
-          "ServiceType": "-",
-          "TrainId": "-",
-          "Platform": "-",
-          "Delay": 0
-        }
-      ]
+      "id": "14293",
+      "destino": "Setúbal",
+      "live": true, 
+      "onde": "Coina",
+      "atraso": "5 min",
+      "suprimido": false
+    },
+    {
+      "id": "14294",
+      "destino": "Roma-Areeiro",
+      "live": true,
+      "onde": "Campolide",
+      "atraso": "0 min",
+      "suprimido": false
     }
   ]
 }

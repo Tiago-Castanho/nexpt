@@ -1,20 +1,14 @@
 "use client"
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
-import { ArrowRight, Zap, Users, TrainFront, Clock, CheckCircle2, Circle } from 'lucide-react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { 
+  ArrowRightLeft, Zap, TrainFront, MapPin, CheckCircle2, 
+  Circle, Navigation, CircleDot, Loader2, ChevronDown
+} from 'lucide-react'
 
-// Definição estendida para suportar o itinerário (nodes)
-interface Comboio {
-  id: string;
-  hora: string;
-  destino: string;
-  atraso: string;
-  passou: boolean;
-  sentido: "Norte" | "Sul";
-  itinerario?: { estacao: string; hora: string; passou: boolean }[];
-}
+interface Paragem { id: string; estacao: string; hora: string; passou: boolean; }
+interface Comboio { id: string; hora: string; destino: string; destinoId: string; atraso: string; suprimido: boolean; sentido: "Norte" | "Sul"; carruagens: number; itinerario: Paragem[]; }
 
-// IDs TÉCNICOS CORRIGIDOS (Essenciais para o backend responder corretamente)
 const ESTACOES = [
   { nome: "Roma-Areeiro", id: "9466035", zona: "Norte" },
   { nome: "Entrecampos", id: "9466050", zona: "Norte" },
@@ -29,188 +23,175 @@ const ESTACOES = [
   { nome: "Setúbal", id: "9468122", zona: "Sul" },
 ];
 
+const ItinerarioBar = ({ itinerario, origemId, destinoId, formatName }: any) => {
+  const ultimaParagem = [...(itinerario || [])].reverse().find(p => p.passou);
+
+  return (
+    <div className="flex items-center gap-6 py-8 border-y border-white/5 overflow-x-auto no-scrollbar mb-8 scroll-smooth">
+      {itinerario?.map((p: any, idx: number) => {
+        const isAtual = ultimaParagem?.id === p.id;
+        const isTarget = p.id === origemId || p.id === destinoId;
+
+        return (
+          <div key={`${p.id}-${idx}`} className="flex flex-col items-center min-w-[100px]">
+            <div className={`mb-4 transition-all duration-500 ${isAtual ? 'text-blue-400 scale-125' : p.passou ? 'text-emerald-500' : isTarget ? 'text-white' : 'text-white/10'}`}>
+              {isAtual ? <Navigation size={22} className="rotate-45 fill-current" /> : 
+               p.passou ? <CheckCircle2 size={18} /> :
+               p.id === destinoId ? <MapPin size={20} className="fill-current" /> :
+               p.id === origemId ? <CircleDot size={18} /> : <Circle size={14} />}
+            </div>
+            <span className={`text-[10px] font-black uppercase text-center tracking-tighter ${isAtual ? 'text-blue-400' : p.passou ? 'text-emerald-500/60' : isTarget ? 'text-white' : 'text-white/20'}`}>
+              {formatName(p.estacao)}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  );
+};
+
 export default function NexPT() {
   const [trains, setTrains] = useState<Comboio[]>([])
   const [loading, setLoading] = useState(true)
-  const [origem, setOrigem] = useState(ESTACOES[4]) // Pragal
-  const [destinoUser, setDestinoUser] = useState(ESTACOES[0]) // Roma-Areeiro
-  const [currentTime, setCurrentTime] = useState("")
+  const [showAll, setShowAll] = useState(false)
+  const [origem, setOrigem] = useState(ESTACOES[6]) 
+  const [destinoUser, setDestinoUser] = useState(ESTACOES[1]) 
 
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setCurrentTime(now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }));
-    };
-    updateTime();
-    const timer = setInterval(updateTime, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const fetchTrains = useCallback(async () => {
+  const fetchTrains = useCallback(async (initial = false) => {
+    if (initial) setLoading(true);
     try {
-      const res = await fetch(`/api/comboios?stationId=${origem.id}&_t=${Date.now()}`, {
-        cache: 'no-store'
-      });
+      const res = await fetch(`/api/comboios?stationId=${origem.id}&t=${Date.now()}`);
       const data = await res.json();
-      if (Array.isArray(data)) {
-        setTrains(data);
-      }
-    } catch (e) {
-      console.error("Erro na procura de dados:", e);
-      setTrains([]);
-    } finally {
-      setLoading(false);
+      setTrains(Array.isArray(data) ? data : []);
+    } catch (e) { 
+      setTrains([]); 
+    } finally { 
+      setLoading(false); 
     }
   }, [origem.id]);
 
   useEffect(() => {
-    setLoading(true);
-    setTrains([]); 
-    fetchTrains();
-    
-    const interval = setInterval(fetchTrains, 30000);
-    return () => clearInterval(interval);
+    fetchTrains(true);
+    const timer = setInterval(() => fetchTrains(false), 30000);
+    return () => clearInterval(timer);
   }, [fetchTrains]);
 
-  const handleOrigemChange = (id: string) => {
-    const novaEstacao = ESTACOES.find(s => s.id === id)!;
-    setOrigem(novaEstacao);
-    if (id === destinoUser.id) {
-      const fallback = ESTACOES.find(s => s.id !== id)!;
-      setDestinoUser(fallback);
-    }
+  const formatStationName = (name: string) => {
+    const u = name.toUpperCase();
+    if (u.includes("SETE RIOS")) return "Sete Rios";
+    if (u.includes("ROMA")) return "Roma";
+    if (u.includes("FOROS")) return "Amora";
+    return name.split(/[\s-]/)[0];
   };
 
   const filtered = useMemo(() => {
-    return trains
-      .filter((t) => t.sentido === destinoUser.zona && !t.passou)
-      .slice(0, 4);
-  }, [trains, destinoUser.zona]);
+    const agora = new Date();
+    const hAtual = agora.getHours();
+
+    return [...trains]
+      .filter((t) => t.sentido === destinoUser.zona)
+      .sort((a, b) => {
+        const [hA, mA] = a.hora.split(':').map(Number);
+        const [hB, mB] = b.hora.split(':').map(Number);
+        let tA = hA * 60 + mA;
+        let tB = hB * 60 + mB;
+
+        if (hAtual >= 20) {
+          if (tA < 300) tA += 1440;
+          if (tB < 300) tB += 1440;
+        }
+        return tA - tB;
+      })
+      .slice(0, showAll ? 6 : 2);
+  }, [trains, destinoUser.zona, showAll]);
 
   return (
     <main className="min-h-screen bg-[#020408] text-white p-6 md:p-12 font-sans selection:bg-blue-500/30">
-      <div className="max-w-[1700px] mx-auto space-y-12">
+      <div className="max-w-[1100px] mx-auto space-y-10">
         
-        <div className="flex justify-between items-end border-b border-white/10 pb-8">
-          <div className="flex items-center gap-3 text-blue-500">
-            <TrainFront size={40} />
-            <h1 className="text-3xl font-black tracking-tighter uppercase italic">
-              Nex<span className="text-white">PT</span>
-            </h1>
-          </div>
-          <div className="text-right">
-            <p className="text-4xl font-mono font-black tabular-nums tracking-tighter">
-              {currentTime}
-            </p>
-            <p className="text-[10px] text-blue-500/50 font-bold uppercase tracking-[0.3em]">Live Node Tracking</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 items-center gap-8 bg-slate-900/20 p-10 rounded-[50px] border border-white/5 backdrop-blur-3xl shadow-2xl">
-          <div className="space-y-2">
-            <label className="text-blue-500 font-black uppercase text-[10px] ml-4 tracking-[0.3em]">Estação de Partida</label>
-            <select 
-              value={origem.id}
-              onChange={(e) => handleOrigemChange(e.target.value)}
-              className="w-full bg-slate-950 border-2 border-slate-800 p-6 rounded-3xl font-black uppercase outline-none focus:border-blue-500 transition-all cursor-pointer appearance-none"
-            >
-              {ESTACOES.map(st => (
-                <option key={st.id} value={st.id}>{st.nome}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex justify-center text-blue-500/20 max-lg:rotate-90">
-            <ArrowRight size={40} />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-blue-500 font-black uppercase text-[10px] ml-4 tracking-[0.3em]">Destino Pretendido</label>
-            <select 
-              value={destinoUser.id}
-              onChange={(e) => setDestinoUser(ESTACOES.find(s => s.id === e.target.value)!)}
-              className="w-full bg-slate-950 border-2 border-slate-800 p-6 rounded-3xl font-black uppercase outline-none focus:border-blue-500 transition-all cursor-pointer appearance-none"
-            >
-              {ESTACOES.map(st => (
-                <option key={st.id} value={st.id} disabled={st.id === origem.id}>
-                  {st.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-4 bg-white/[0.02] p-6 rounded-[30px] border border-white/5">
+          <select value={origem.id} onChange={(e) => { setOrigem(ESTACOES.find(s => s.id === e.target.value)!); setShowAll(false); }} className="w-full bg-slate-950 border border-white/10 p-4 rounded-xl font-bold uppercase text-xs appearance-none cursor-pointer text-center outline-none">
+            {ESTACOES.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+          </select>
+          <button onClick={() => { const t = origem; setOrigem(destinoUser); setDestinoUser(t); setShowAll(false); }} className="p-4 rounded-full bg-blue-500/10 text-blue-500 active:scale-90 transition-transform"><ArrowRightLeft size={24} /></button>
+          <select value={destinoUser.id} onChange={(e) => { setDestinoUser(ESTACOES.find(s => s.id === e.target.value)!); setShowAll(false); }} className="w-full bg-slate-950 border border-white/10 p-4 rounded-xl font-bold uppercase text-xs appearance-none cursor-pointer text-center outline-none">
+            {ESTACOES.map(s => <option key={s.id} value={s.id} disabled={s.id === origem.id}>{s.nome}</option>)}
+          </select>
         </div>
 
         {loading ? (
-          <div className="py-40 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-blue-500 mb-4"></div>
-            <p className="text-blue-500 font-black uppercase tracking-[0.5em] text-sm animate-pulse">Sincronizando {origem.nome}...</p>
-          </div>
+          <div className="py-24 flex justify-center"><Loader2 className="animate-spin text-blue-500" size={40} /></div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            {filtered.length > 0 ? filtered.map((train) => (
-              <div 
-                key={train.id} 
-                className="relative bg-slate-900/30 border-2 border-slate-800 p-12 rounded-[70px] min-h-[520px] flex flex-col justify-between group hover:border-blue-500/50 transition-all duration-500 shadow-2xl"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 text-blue-500">
-                      <Zap size={24} fill="currentColor" />
-                      <span className="text-lg font-black tracking-[0.5em] uppercase italic">Partida</span>
-                    </div>
-                    <h2 className="text-[12rem] font-mono font-black leading-[0.75] tracking-tighter">
-                      {train.hora}
-                    </h2>
-                  </div>
-                  <div className={`h-12 w-12 rounded-full ${train.atraso ? 'bg-orange-500 animate-pulse' : 'bg-emerald-500'}`} />
-                </div>
+          <div className="space-y-8">
+            {filtered.map((train) => {
+              const infoChegada = train.itinerario?.find(p => p.id === destinoUser.id);
+              const viagemComecou = train.itinerario?.some(p => p.passou);
 
-                {/* VISUALIZAÇÃO DE NODES (O NOVO COMPONENTE DE HORAS PREVISTAS) */}
-                <div className="relative overflow-x-auto no-scrollbar py-4 mb-4">
-                  <div className="flex items-start gap-8 min-w-max">
-                    {train.itinerario?.map((p, idx) => (
-                      <div key={idx} className="flex flex-col items-center w-20 relative">
-                        {idx !== train.itinerario!.length - 1 && (
-                          <div className={`absolute top-2.5 left-1/2 w-full h-[1px] ${p.passou ? 'bg-emerald-500/30' : 'bg-white/5'}`} />
-                        )}
-                        <div className={`${p.passou ? 'text-emerald-500' : 'text-white/10'}`}>
-                          {p.passou ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+              return (
+                <div key={`${train.id}-${train.hora}`} className={`p-8 rounded-[40px] border transition-all ${train.suprimido ? 'opacity-40 bg-red-950/10 border-red-900/20' : 'bg-[#05070a] border-white/5'}`}>
+                  
+                  <div className="flex justify-between items-center mb-10">
+                    <div className="flex items-center gap-8">
+                      <div className="flex flex-col items-center justify-center bg-white/[0.03] border border-white/10 rounded-2xl p-4">
+                        <div className="flex gap-1">
+                          {[...Array(train.carruagens)].map((_, i) => (
+                            <div key={i} className="w-2.5 h-5 bg-blue-500 rounded-sm" />
+                          ))}
                         </div>
-                        <p className={`text-[8px] font-bold uppercase text-center mt-3 leading-tight ${p.passou ? 'opacity-30' : 'opacity-100'}`}>
-                          {p.estacao.split(' ')[0]}
-                        </p>
-                        <p className="text-[8px] font-mono opacity-40 mt-1">{p.hora}</p>
+                        <span className="text-[9px] font-black mt-2 text-blue-400/80 uppercase">{train.carruagens} UNIDADES</span>
                       </div>
-                    ))}
+                      <div className="flex flex-col">
+                        <div className="text-[10px] font-black uppercase text-blue-500 flex items-center gap-2 mb-2">
+                            <Zap size={12} className="fill-current" /> {viagemComecou ? 'Em Circulação' : 'Programado'}
+                        </div>
+                        <h2 className="text-7xl font-mono font-black italic tracking-tighter leading-none">{train.hora}</h2>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black uppercase text-white/30 mb-1">Estimativa Destino</p>
+                      <p className="text-3xl font-mono font-black text-blue-100">{infoChegada?.hora || "--:--"}</p>
+                    </div>
+                  </div>
+
+                  {viagemComecou ? (
+                    <ItinerarioBar 
+                      itinerario={train.itinerario} 
+                      origemId={origem.id} 
+                      destinoId={destinoUser.id} 
+                      formatName={formatStationName} 
+                    />
+                  ) : (
+                    <div className="h-24 mb-8 border-y border-white/[0.02]" />
+                  )}
+
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-[10px] font-mono text-blue-400/60 mb-1 tracking-widest uppercase italic">Serviço Fertagus {train.id}</p>
+                      <h3 className="text-4xl font-black uppercase tracking-tighter italic leading-none">{train.destino}</h3>
+                    </div>
+                    <div className={`px-6 py-3 rounded-full border font-black text-[10px] uppercase tracking-widest ${train.atraso ? 'border-orange-500/20 text-orange-400 bg-orange-500/5' : 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5'}`}>
+                      {train.suprimido ? 'Suprimido' : (train.atraso || 'Programado')}
+                    </div>
                   </div>
                 </div>
+              );
+            })}
 
-                <div className="space-y-4">
-                   <h3 className="text-8xl font-black tracking-tighter uppercase leading-none truncate">
-                     {train.destino}
-                   </h3>
-                   <p className="text-blue-500 font-black tracking-[0.2em] text-xs uppercase italic">
-                     Sentido {train.sentido}
-                   </p>
-                </div>
-
-                <div className="flex justify-between items-center pt-8 border-t border-white/5 text-slate-500 font-black tracking-widest text-[11px] uppercase">
-                  <div className="flex items-center gap-2"><Users size={18} /> Lotação OK</div>
-                  <div className={`flex items-center gap-2 font-black ${train.atraso ? 'text-orange-500' : 'text-emerald-500'}`}>
-                    <Clock size={18} /> {train.atraso || "No Horário"}
-                  </div>
-                </div>
-              </div>
-            )) : (
-              <div className="col-span-full py-40 text-center border-2 border-dashed border-slate-800 rounded-[60px] bg-slate-900/5">
-                <p className="text-slate-500 text-xl font-black uppercase tracking-[0.3em]">
-                  Sem comboios de {origem.nome} para {destinoUser.nome}
-                </p>
-              </div>
+            {trains.length > 2 && (
+              <button 
+                onClick={() => setShowAll(!showAll)}
+                className="w-full py-6 rounded-[30px] border border-white/5 bg-white/[0.01] hover:bg-white/[0.03] transition-all flex items-center justify-center gap-3 group"
+              >
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 group-hover:text-blue-400 transition-colors">
+                  {showAll ? 'Mostrar Menos' : 'Ver mais horários'}
+                </span>
+                <ChevronDown size={16} className={`text-white/20 group-hover:text-blue-400 transition-all ${showAll ? 'rotate-180' : ''}`} />
+              </button>
             )}
           </div>
         )}
       </div>
+      <style jsx global>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
     </main>
   )
 }
